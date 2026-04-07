@@ -1,4 +1,4 @@
-# 📊 DataLens — Intelligent Data Dashboard
+# 📊 InsightHub — Intelligent Data Dashboard
 
 A clean, production-ready web platform to upload, visualize, analyze, and export data from Excel and CSV files — powered by AI insights.
 
