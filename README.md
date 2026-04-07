@@ -26,7 +26,7 @@ A clean, production-ready web platform to upload, visualize, analyze, and export
 
 ### Option 1: Open locally (zero setup)
 ```bash
-git clone https://github.com/YOUR_USERNAME/datalens.git
+git clone https://github.com/YOUR_USERNAME/InsightHub.git
 cd datalens
 # Open index.html in your browser — that's it!
 open index.html
@@ -36,7 +36,7 @@ open index.html
 1. Push to GitHub
 2. Go to **Settings → Pages**
 3. Set source to `main` branch, `/ (root)`
-4. Your site is live at `https://YOUR_USERNAME.github.io/datalens`
+4. Your site is live at `https://YOUR_USERNAME.github.io/InsightHub`
 
 ### Option 3: Any static host
 Drop the 3 HTML files on Netlify, Vercel, or any web server — no build step needed.
@@ -114,4 +114,4 @@ MIT — free to use, modify, and distribute.
 
 ---
 
-Built with ❤️ using DataLens · [GitHub](https://github.com/YOUR_USERNAME/datalens)
+Built by **Syed Saif Ali**
