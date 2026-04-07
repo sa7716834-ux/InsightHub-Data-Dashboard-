@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DataLens — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>window.jsPDF = window.jspdf.jsPDF;</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F8FAFC;--surface:#FFFFFF;--surface2:#F1F5F9;--border:#E2E8F0;
+  --text:#0F172A;--text-muted:#64748B;--text-subtle:#94A3B8;
+  --blue:#2563EB;--blue-light:#DBEAFE;--blue-dark:#1D4ED8;
+  --green:#10B981;--green-light:#D1FAE5;
+  --amber:#F59E0B;--amber-light:#FEF3C7;
+  --red:#EF4444;--red-light:#FEE2E2;
+  --sidebar:220px;--header:64px;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);
+}
+html{font-size:16px}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+button{font-family:'DM Sans',sans-serif;cursor:pointer}
+input,select,textarea{font-family:'DM Sans',sans-serif}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:var(--sidebar) 1fr;grid-template-rows:var(--header) 1fr;min-height:100vh}
+
+/* ── SIDEBAR ── */
+.sidebar{grid-row:1/3;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;width:var(--sidebar);height:100vh;z-index:50;transition:transform .3s}
+.sb-brand{padding:0 20px;height:var(--header);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);font-weight:700;font-size:1rem}
+.sb-logo{width:30px;height:30px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-logo svg{width:15px;height:15px;fill:white}
+.sb-nav{flex:1;overflow-y:auto;padding:16px 0}
+.nav-section{margin-bottom:24px}
+.nav-section-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-subtle);padding:0 20px;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:.845rem;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .15s;border-right:2.5px solid transparent;position:relative}
+.nav-item:hover{color:var(--text);background:var(--bg)}
+.nav-item.active{color:var(--blue);background:var(--blue-light);border-right-color:var(--blue);font-weight:600}
+.nav-item svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--blue);color:white;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:100px}
+.sb-footer{padding:16px 20px;border-top:1px solid var(--border)}
+.user-card{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;transition:all .2s}
+.user-card:hover{border-color:var(--blue);background:var(--blue-light)}
+.user-ava{width:34px;height:34px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:.85rem;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:.7rem;color:var(--text-muted)}
+.user-card svg{width:14px;height:14px;stroke:var(--text-muted);fill:none;stroke-width:2;flex-shrink:0}
+
+/* ── HEADER ── */
+.header{grid-column:2;background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;height:var(--header)}
+.header-left{display:flex;align-items:center;gap:16px}
+.page-title{font-size:1rem;font-weight:700}
+.page-sub{font-size:.78rem;color:var(--text-muted);margin-top:1px}
+.header-right{display:flex;align-items:center;gap:10px}
+.hbtn{display:flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--radius-sm);font-size:.82rem;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--text-muted);transition:all .2s;cursor:pointer;white-space:nowrap}
+.hbtn:hover{border-color:var(--blue);color:var(--blue)}
+.hbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hbtn-primary{background:var(--blue);color:white;border-color:var(--blue)}
+.hbtn-primary:hover{background:var(--blue-dark);border-color:var(--blue-dark);color:white}
+.hbtn-green{background:var(--green);color:white;border-color:var(--green)}
+.hbtn-green:hover{background:#059669;border-color:#059669;color:white}
+
+/* ── MAIN CONTENT ── */
+.main{grid-column:2;padding:28px;overflow-y:auto}
+
+/* ── PANELS (sections) ── */
+.panel{display:none}
+.panel.active{display:block}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:2px dashed var(--border);border-radius:16px;padding:56px 32px;text-align:center;transition:all .25s;cursor:pointer;background:var(--surface);position:relative}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--blue);background:var(--blue-light)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.uz-icon{width:64px;height:64px;background:var(--blue-light);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.uz-icon svg{width:28px;height:28px;stroke:var(--blue);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.uz-title{font-size:1.1rem;font-weight:700;margin-bottom:8px}
+.uz-sub{color:var(--text-muted);font-size:.875rem;line-height:1.6;margin-bottom:20px}
+.uz-formats{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.fmt-chip{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:.75rem;font-weight:600;color:var(--text-muted);font-family:'DM Mono',monospace}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;transition:all .2s}
+.kpi-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kc-blue::before{background:var(--blue)}.kc-green::before{background:var(--green)}.kc-amber::before{background:var(--amber)}.kc-red::before{background:var(--red)}
+.kpi-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.kpi-label svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.kpi-value{font-size:1.7rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-.02em;margin-bottom:6px}
+.kpi-delta{font-size:.75rem;display:flex;align-items:center;gap:4px}
+.delta-up{color:var(--green)}.delta-dn{color:var(--red)}.delta-neu{color:var(--text-muted)}
+
+/* ── CHARTS GRID ── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.chart-card.span2{grid-column:1/-1}
+.cc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cc-title{font-size:.85rem;font-weight:700}
+.cc-sub{font-size:.72rem;color:var(--text-muted);margin-top:2px}
+.cc-controls{display:flex;gap:6px}
+.chart-type-btn{padding:4px 10px;border-radius:6px;font-size:.72rem;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.chart-type-btn.active,.chart-type-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-light)}
+.chart-canvas-wrap{position:relative;height:240px}
+
+/* ── DATA TABLE ── */
+.table-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;padding:9px 14px 9px 36px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.875rem;outline:none;background:var(--surface);transition:border-color .2s}
+.search-wrap input:focus{border-color:var(--blue)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-subtle)}
+.search-icon svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
+select.filter-sel{padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.82rem;outline:none;background:var(--surface);color:var(--text);transition:border-color .2s;min-width:120px}
+select.filter-sel:focus{border-color:var(--blue)}
+input.filter-inp{padding:7px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.82rem;outline:none;background:var(--surface);color:var(--text);transition:border-color .2s;min-width:120px}
+input.filter-inp:focus{border-color:var(--blue)}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.data-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.data-table thead th{padding:10px 14px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);white-space:nowrap;cursor:pointer;user-select:none}
+.data-table thead th:hover{color:var(--blue)}
+.data-table thead th.sort-asc::after{content:' ↑'}
+.data-table thead th.sort-desc::after{content:' ↓'}
+.data-table tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+.data-table tbody tr:last-child{border-bottom:none}
+.data-table tbody tr:hover{background:var(--bg)}
+.data-table td{padding:10px 14px;color:var(--text);vertical-align:middle}
+.data-table td.num{font-family:'DM Mono',monospace;font-size:.78rem}
+.table-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface2);border-top:1px solid var(--border);font-size:.78rem;color:var(--text-muted)}
+.pagination{display:flex;gap:4px}
+.pg-btn{padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:.75rem;font-weight:600;cursor:pointer;color:var(--text-muted);transition:all .15s}
+.pg-btn:hover,.pg-btn.active{background:var(--blue);color:white;border-color:var(--blue)}
+
+/* ── AI INSIGHTS ── */
+.ai-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px}
+.ai-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to right,var(--blue-light),white)}
+.ai-header-left{display:flex;align-items:center;gap:10px}
+.ai-icon{width:36px;height:36px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.ai-icon svg{width:18px;height:18px;stroke:white;fill:none;stroke-width:2}
+.ai-title{font-size:.9rem;font-weight:700}
+.ai-sub{font-size:.72rem;color:var(--text-muted);margin-top:1px}
+.ai-body{padding:20px}
+.ai-chat{max-height:320px;overflow-y:auto;margin-bottom:16px;display:flex;flex-direction:column;gap:12px}
+.ai-msg{max-width:85%;padding:12px 16px;border-radius:12px;font-size:.855rem;line-height:1.6}
+.ai-msg.ai{background:var(--bg);border:1px solid var(--border);align-self:flex-start;border-radius:4px 12px 12px 12px}
+.ai-msg.user{background:var(--blue);color:white;align-self:flex-end;border-radius:12px 4px 12px 12px}
+.ai-msg-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;opacity:.7}
+.ai-input-row{display:flex;gap:8px}
+.ai-input{flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.875rem;outline:none;transition:border-color .2s;resize:none}
+.ai-input:focus{border-color:var(--blue)}
+.ai-send{padding:10px 18px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-weight:600;font-size:.875rem;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;white-space:nowrap}
+.ai-send:hover{background:var(--blue-dark)}
+.ai-send svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5}
+.ai-suggestions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.ai-sug{padding:6px 12px;background:var(--blue-light);color:var(--blue);border:1px solid rgba(37,99,235,.2);border-radius:100px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s}
+.ai-sug:hover{background:var(--blue);color:white}
+
+/* ── REPORTS ── */
+.report-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.report-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;transition:all .25s}
+.report-card:hover{border-color:var(--blue);box-shadow:var(--shadow);transform:translateY(-2px)}
+.rc-ico{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.rc-ico svg{width:24px;height:24px;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rc-t{font-size:.95rem;font-weight:700;margin-bottom:8px}
+.rc-d{font-size:.8rem;color:var(--text-muted);line-height:1.6;margin-bottom:18px}
+.rc-btn{padding:9px 18px;border-radius:var(--radius-sm);font-size:.8rem;font-weight:700;border:none;cursor:pointer;transition:all .2s;width:100%}
+
+/* ── USERS ── */
+.users-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.user-row{display:grid;grid-template-columns:2.5fr 2fr 1.5fr 1fr 1fr;padding:12px 20px;border-bottom:1px solid var(--border);align-items:center;transition:background .15s}
+.user-row:last-child{border-bottom:none}
+.user-row:hover{background:var(--bg)}
+.user-row.header{background:var(--surface2);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)}
+.ur-user{display:flex;align-items:center;gap:10px}
+.ur-ava{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.78rem;color:white;flex-shrink:0}
+.ur-name{font-size:.85rem;font-weight:600}
+.ur-email{font-size:.75rem;color:var(--text-muted)}
+.role-badge{display:inline-flex;padding:3px 10px;border-radius:6px;font-size:.72rem;font-weight:700}
+.rb-admin{background:var(--blue-light);color:var(--blue)}
+.rb-analyst{background:var(--green-light);color:#065F46}
+.rb-viewer{background:var(--amber-light);color:#92400E}
+.status-dot{width:8px;height:8px;border-radius:50%;margin:0 auto}
+.sd-on{background:var(--green)}.sd-off{background:var(--text-subtle)}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:72px 32px;color:var(--text-muted)}
+.es-icon{width:72px;height:72px;background:var(--surface2);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.es-icon svg{width:32px;height:32px;stroke:var(--text-subtle);fill:none;stroke-width:1.5}
+.es-title{font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:8px}
+.es-sub{font-size:.875rem;line-height:1.7;max-width:360px;margin:0 auto 24px}
+
+/* ── TOAST ── */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 18px;border-radius:var(--radius-sm);font-size:.845rem;font-weight:600;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.12);animation:slideIn .3s ease;max-width:320px}
+.toast svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.5;flex-shrink:0}
+.toast-success{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0}
+.toast-error{background:var(--red-light);color:#991B1B;border:1px solid #FCA5A5}
+.toast-info{background:var(--blue-light);color:var(--blue);border:1px solid rgba(37,99,235,.3)}
+@keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:200;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:16px;width:90%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:1rem;font-weight:700}
+.modal-close{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);transition:all .2s}
+.modal-close:hover{border-color:var(--red);color:var(--red)}
+.modal-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.modal-body{padding:24px}
+
+/* ── PROGRESS ── */
+.progress-wrap{background:var(--surface2);border-radius:100px;height:6px;overflow:hidden;margin:8px 0}
+.progress-bar{height:100%;border-radius:100px;background:var(--blue);transition:width .4s ease}
+
+/* ── MISC ── */
+.section-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+.section-title{font-size:1rem;font-weight:700}
+.section-sub{font-size:.78rem;color:var(--text-muted);margin-top:3px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:.7rem;font-weight:700}
+.badge-blue{background:var(--blue-light);color:var(--blue)}
+.badge-green{background:var(--green-light);color:#065F46}
+.badge-amber{background:var(--amber-light);color:#92400E}
+.mobile-menu-btn{display:none;width:40px;height:40px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;align-items:center;justify-content:center;cursor:pointer}
+.mobile-menu-btn svg{width:18px;height:18px;stroke:var(--text);fill:none;stroke-width:2}
+
+@media(max-width:900px){
+  .app{grid-template-columns:1fr;grid-template-rows:var(--header) 1fr}
+  .sidebar{transform:translateX(-100%);box-shadow:4px 0 20px rgba(0,0,0,.1)}
+  .sidebar.open{transform:none}
+  .header,.main{grid-column:1}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .charts-grid{grid-template-columns:1fr}
+  .report-grid{grid-template-columns:1fr 1fr}
+  .mobile-menu-btn{display:flex}
+  .user-row{grid-template-columns:2fr 1fr 1fr;}.user-row>:nth-child(2),.user-row>:nth-child(5){display:none}
+}
+@media(max-width:600px){
+  .kpi-grid{grid-template-columns:1fr}.report-grid{grid-template-columns:1fr}
+  .main{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"/></svg></div>
+      DataLens
+    </div>
+    <nav class="sb-nav">
+      <div class="nav-section">
+        <div class="nav-section-label">Overview</div>
+        <div class="nav-item active" onclick="showPanel('dashboard',this)">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </div>
+        <div class="nav-item" onclick="showPanel('upload',this)">
+          <svg viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          Upload Data
+          <span class="nav-badge" id="upload-badge" style="display:none">1</span>
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Analysis</div>
+        <div class="nav-item" onclick="showPanel('charts',this)">
+          <svg viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          Charts
+        </div>
+        <div class="nav-item" onclick="showPanel('table',this)">
+          <svg viewBox="0 0 24 24"><path d="M3 10h18M3 14h18M10 6h4M10 18h4" stroke-linecap="round"/></svg>
+          Data Table
+        </div>
+        <div class="nav-item" onclick="showPanel('ai',this)">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          AI Insights
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Output</div>
+        <div class="nav-item" onclick="showPanel('reports',this)">
+          <svg viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Reports & Export
+        </div>
+        <div class="nav-item" onclick="showPanel('users',this)" id="nav-users">
+          <svg viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          User Management
+        </div>
+      </div>
+    </nav>
+    <div class="sb-footer">
+      <div class="user-card" onclick="logout()">
+        <div class="user-ava" id="user-ava">?</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">Loading...</div>
+          <div class="user-role" id="user-role">—</div>
+        </div>
+        <svg viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <header class="header">
+    <div class="header-left">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      <div>
+        <div class="page-title" id="page-title">Dashboard</div>
+        <div class="page-sub" id="page-sub">Overview of your dataset</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="hbtn" onclick="showPanel('upload', document.querySelector('[onclick*=upload]'))">
+        <svg viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        Upload
+      </button>
+      <button class="hbtn" onclick="exportCSV()">
+        <svg viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M8 12l4 4 4-4M12 4v12"/></svg>
+        CSV
+      </button>
+      <button class="hbtn hbtn-primary" onclick="exportPDF()">
+        <svg viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        PDF Report
+      </button>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <div class="panel active" id="panel-dashboard">
+      <div class="kpi-grid">
+        <div class="kpi-card kc-blue">
+          <div class="kpi-label">Total Records <svg viewBox="0 0 24 24"><path d="M3 10h18M3 14h18M10 6h4M10 18h4" stroke-linecap="round"/></svg></div>
+          <div class="kpi-value" id="kpi-rows">—</div>
+          <div class="kpi-delta delta-neu" id="kpi-rows-d">Upload a file to begin</div>
+        </div>
+        <div class="kpi-card kc-green">
+          <div class="kpi-label">Columns <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div>
+          <div class="kpi-value" id="kpi-cols">—</div>
+          <div class="kpi-delta delta-neu" id="kpi-cols-d">Fields detected</div>
+        </div>
+        <div class="kpi-card kc-amber">
+          <div class="kpi-label">Numeric Sum <svg viewBox="0 0 24 24"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M12 7h.01"/></svg></div>
+          <div class="kpi-value" id="kpi-sum">—</div>
+          <div class="kpi-delta delta-neu" id="kpi-sum-d">First numeric column</div>
+        </div>
+        <div class="kpi-card kc-red">
+          <div class="kpi-label">Avg. Value <svg viewBox="0 0 24 24"><path d="M16 8v8m-8-5v5M8 8v.01M12 6v12" stroke-linecap="round"/></svg></div>
+          <div class="kpi-value" id="kpi-avg">—</div>
+          <div class="kpi-delta delta-neu" id="kpi-avg-d">Mean of numeric column</div>
+        </div>
+      </div>
+
+      <div class="charts-grid" id="dashboard-charts">
+        <div class="chart-card">
+          <div class="cc-header">
+            <div><div class="cc-title" id="chart1-title">Bar Chart</div><div class="cc-sub" id="chart1-sub">Upload data to populate</div></div>
+            <div class="cc-controls">
+              <button class="chart-type-btn active" onclick="setChartType('chart1','bar',this)">Bar</button>
+              <button class="chart-type-btn" onclick="setChartType('chart1','line',this)">Line</button>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap"><canvas id="chart1"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-header">
+            <div><div class="cc-title" id="chart2-title">Distribution</div><div class="cc-sub">Category breakdown</div></div>
+            <div class="cc-controls">
+              <button class="chart-type-btn active" onclick="setChartType('chart2','doughnut',this)">Donut</button>
+              <button class="chart-type-btn" onclick="setChartType('chart2','pie',this)">Pie</button>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap"><canvas id="chart2"></canvas></div>
+        </div>
+        <div class="chart-card span2">
+          <div class="cc-header">
+            <div><div class="cc-title" id="chart3-title">Trend Overview</div><div class="cc-sub">Full dataset visualization</div></div>
+            <div class="cc-controls">
+              <button class="chart-type-btn active" onclick="setChartType('chart3','line',this)">Line</button>
+              <button class="chart-type-btn" onclick="setChartType('chart3','bar',this)">Bar</button>
+              <button class="chart-type-btn" onclick="setChartType('chart3','scatter',this)">Scatter</button>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap" style="height:200px"><canvas id="chart3"></canvas></div>
+        </div>
+      </div>
+
+      <div id="no-data-state" class="empty-state">
+        <div class="es-icon"><svg viewBox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+        <div class="es-title">No data loaded yet</div>
+        <div class="es-sub">Upload a CSV or Excel file to see your data visualized with interactive charts and KPI summaries.</div>
+        <button class="hbtn hbtn-primary" style="margin:0 auto" onclick="showPanel('upload', document.querySelector('[onclick*=upload]'))">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          Upload your first file
+        </button>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-upload">
+      <div class="upload-zone" id="upload-zone" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+        <input type="file" accept=".csv,.xlsx,.xls" id="file-input" onchange="handleFileSelect(event)"/>
+        <div class="uz-icon"><svg viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg></div>
+        <div class="uz-title">Drop your file here, or click to browse</div>
+        <div class="uz-sub">Supports Excel and CSV files up to 100MB.<br>DataLens will auto-detect columns, types, and generate instant charts.</div>
+        <div class="uz-formats">
+          <span class="fmt-chip">.csv</span>
+          <span class="fmt-chip">.xlsx</span>
+          <span class="fmt-chip">.xls</span>
+        </div>
+      </div>
+      <div id="upload-progress" style="display:none;margin-top:20px">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:6px">
+          <span id="upload-filename" style="font-weight:600">Processing...</span>
+          <span id="upload-pct">0%</span>
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+        <div id="upload-detail" style="font-size:.75rem;color:var(--text-muted);margin-top:6px"></div>
+      </div>
+      <div id="file-preview-info" style="display:none;margin-top:20px"></div>
+
+      <div style="margin-top:32px">
+        <div class="section-header"><div><div class="section-title">Or load a demo dataset</div><div class="section-sub">Try DataLens instantly with sample data</div></div></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+          <div class="report-card" onclick="loadDemo('sales')">
+            <div class="rc-ico" style="background:var(--blue-light)"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
+            <div class="rc-t">Sales Data</div>
+            <div class="rc-d">Q4 sales records with product, revenue, region, and category columns.</div>
+            <button class="rc-btn" style="background:var(--blue-light);color:var(--blue)">Load dataset</button>
+          </div>
+          <div class="report-card" onclick="loadDemo('finance')">
+            <div class="rc-ico" style="background:var(--green-light)"><svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div class="rc-t">Financial Data</div>
+            <div class="rc-d">Monthly budget, expenses, profit margins and financial KPIs across departments.</div>
+            <button class="rc-btn" style="background:var(--green-light);color:#065F46">Load dataset</button>
+          </div>
+          <div class="report-card" onclick="loadDemo('academic')">
+            <div class="rc-ico" style="background:var(--amber-light)"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"><path d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/></svg></div>
+            <div class="rc-t">Academic Data</div>
+            <div class="rc-d">Student scores, grades, subjects and semester performance metrics.</div>
+            <button class="rc-btn" style="background:var(--amber-light);color:#92400E">Load dataset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-charts">
+      <div id="charts-empty" class="empty-state">
+        <div class="es-icon"><svg viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
+        <div class="es-title">No data to chart</div>
+        <div class="es-sub">Upload a file first to generate interactive charts from your dataset.</div>
+      </div>
+      <div id="charts-content" style="display:none">
+        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+          <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:4px">X Axis</label>
+          <select class="filter-sel" id="chart-x" onchange="renderCustomChart()"><option>—</option></select></div>
+          <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:4px">Y Axis</label>
+          <select class="filter-sel" id="chart-y" onchange="renderCustomChart()"><option>—</option></select></div>
+          <div><label style="font-size:.78rem;font-weight:600;display:block;margin-bottom:4px">Chart Type</label>
+          <select class="filter-sel" id="chart-type-sel" onchange="renderCustomChart()">
+            <option value="bar">Bar</option><option value="line">Line</option><option value="doughnut">Donut</option><option value="pie">Pie</option><option value="scatter">Scatter</option>
+          </select></div>
+        </div>
+        <div class="chart-card" style="margin-bottom:20px">
+          <div class="cc-header"><div><div class="cc-title">Custom Chart</div><div class="cc-sub" id="custom-chart-sub">Select X and Y axes above</div></div></div>
+          <div class="chart-canvas-wrap" style="height:320px"><canvas id="custom-chart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-table">
+      <div id="table-empty" class="empty-state">
+        <div class="es-icon"><svg viewBox="0 0 24 24"><path d="M3 10h18M3 14h18M10 6h4M10 18h4" stroke-linecap="round"/></svg></div>
+        <div class="es-title">No data loaded</div>
+        <div class="es-sub">Upload or load a demo dataset to explore your data in the interactive table.</div>
+      </div>
+      <div id="table-content" style="display:none">
+        <div class="table-toolbar">
+          <div class="search-wrap">
+            <div class="search-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+            <input type="text" placeholder="Search all columns..." id="table-search" oninput="filterTable()"/>
+          </div>
+          <button class="hbtn" onclick="toggleFilterRow()">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+            Filters
+          </button>
+          <span id="table-count" style="font-size:.78rem;color:var(--text-muted);white-space:nowrap"></span>
+        </div>
+        <div class="filter-row" id="filter-row" style="display:none" id="filter-row">
+          <select class="filter-sel" id="filter-col"><option value="">All columns</option></select>
+          <select class="filter-sel" id="filter-op">
+            <option value="contains">Contains</option>
+            <option value="equals">Equals</option>
+            <option value="gt">Greater than</option>
+            <option value="lt">Less than</option>
+          </select>
+          <input class="filter-inp" type="text" id="filter-val" placeholder="Value..." oninput="filterTable()"/>
+          <button class="hbtn" onclick="clearFilter()">Clear</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="data-table">
+            <thead id="table-head"></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <div id="table-info">Showing 0 of 0 rows</div>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-ai">
+      <div class="ai-panel">
+        <div class="ai-header">
+          <div class="ai-header-left">
+            <div class="ai-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+            <div><div class="ai-title">AI Data Analyst</div><div class="ai-sub">Powered by Claude · Ask anything about your dataset</div></div>
+          </div>
+          <span class="badge badge-blue">Demo Mode</span>
+        </div>
+        <div class="ai-body">
+          <div class="ai-suggestions" id="ai-suggestions">
+            <div class="ai-sug" onclick="sendAISuggestion(this)">What is the total sum of all numeric columns?</div>
+            <div class="ai-sug" onclick="sendAISuggestion(this)">Which rows have the highest values?</div>
+            <div class="ai-sug" onclick="sendAISuggestion(this)">Summarize this dataset for me</div>
+            <div class="ai-sug" onclick="sendAISuggestion(this)">Are there any anomalies or outliers?</div>
+          </div>
+          <div class="ai-chat" id="ai-chat">
+            <div class="ai-msg ai">
+              <div class="ai-msg-label">DataLens AI</div>
+              👋 Hi! I'm your AI data analyst. Upload a dataset and I'll help you understand trends, find patterns, and answer questions about your data in plain English.
+            </div>
+          </div>
+          <div class="ai-input-row">
+            <textarea class="ai-input" id="ai-input" placeholder="Ask a question about your data..." rows="2" onkeydown="handleAIKey(event)"></textarea>
+            <button class="ai-send" onclick="sendAIMessage()">
+              <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-reports">
+      <div class="section-header"><div><div class="section-title">Reports & Export</div><div class="section-sub">Download your analysis in multiple formats</div></div></div>
+      <div class="report-grid">
+        <div class="report-card">
+          <div class="rc-ico" style="background:var(--red-light)"><svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+          <div class="rc-t">PDF Report</div>
+          <div class="rc-d">Full dashboard export as a styled PDF — includes KPIs, summary stats, and data table.</div>
+          <button class="rc-btn" style="background:#FEE2E2;color:#991B1B" onclick="exportPDF()">Download PDF</button>
+        </div>
+        <div class="report-card">
+          <div class="rc-ico" style="background:var(--green-light)"><svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 017 7h2M15 7h2a5 5 0 110 10h-2M8 12h8"/></svg></div>
+          <div class="rc-t">CSV Export</div>
+          <div class="rc-d">Download your current filtered dataset as a clean comma-separated CSV file.</div>
+          <button class="rc-btn" style="background:var(--green-light);color:#065F46" onclick="exportCSV()">Download CSV</button>
+        </div>
+        <div class="report-card">
+          <div class="rc-ico" style="background:var(--blue-light)"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+          <div class="rc-t">Excel Export</div>
+          <div class="rc-d">Export to .xlsx format compatible with Microsoft Excel and Google Sheets.</div>
+          <button class="rc-btn" style="background:var(--blue-light);color:var(--blue)" onclick="exportExcel()">Download XLSX</button>
+        </div>
+        <div class="report-card">
+          <div class="rc-ico" style="background:#F3E8FF"><svg viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>
+          <div class="rc-t">Summary Stats</div>
+          <div class="rc-d">Get min, max, mean, median and standard deviation for all numeric columns.</div>
+          <button class="rc-btn" style="background:#F3E8FF;color:#7C3AED" onclick="showSummaryStats()">View Stats</button>
+        </div>
+        <div class="report-card">
+          <div class="rc-ico" style="background:var(--amber-light)"><svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></div>
+          <div class="rc-t">Copy JSON</div>
+          <div class="rc-d">Copy your dataset as JSON to clipboard for use in APIs or other applications.</div>
+          <button class="rc-btn" style="background:var(--amber-light);color:#92400E" onclick="copyJSON()">Copy JSON</button>
+        </div>
+        <div class="report-card">
+          <div class="rc-ico" style="background:#E0F2FE"><svg viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></div>
+          <div class="rc-t">Data Profile</div>
+          <div class="rc-d">Complete column-by-column profiling including unique count, null count, and data types.</div>
+          <button class="rc-btn" style="background:#E0F2FE;color:#0284C7" onclick="showDataProfile()">View Profile</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-users">
+      <div class="section-header">
+        <div><div class="section-title">User Management</div><div class="section-sub">Manage team access and permissions</div></div>
+        <button class="hbtn hbtn-primary" onclick="openAddUserModal()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add user
+        </button>
+      </div>
+      <div class="users-table-wrap">
+        <div class="user-row header">
+          <div>User</div><div>Email</div><div>Role</div><div style="text-align:center">Status</div><div style="text-align:center">Action</div>
+        </div>
+        <div id="users-list"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Modal</div>
+      <button class="modal-close" onclick="closeModalDirect()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let allData = [], filteredData = [], headers = [], currentPage = 1, rowsPerPage = 20;
+let sortCol = null, sortDir = 1;
+let charts = {};
+let currentUser = null;
+
+// ── INIT ──
+window.onload = ()=>{
+  // Modified to skip login jump just in case you test it locally without login.html
+  const session = JSON.parse(localStorage.getItem('dl_session')||'{"name":"Admin User","role":"Admin"}');
+  currentUser = session;
+  document.getElementById('user-name').textContent = session.name;
+  document.getElementById('user-role').textContent = session.role;
+  document.getElementById('user-ava').textContent = session.name.charAt(0).toUpperCase();
+  // Hide users panel for non-admins
+  if(session.role !== 'Admin') document.getElementById('nav-users').style.display='none';
+  loadUsers();
+  // Auto-load demo data for first-time users
+  const saved = localStorage.getItem('dl_data');
+  if(saved){ const d=JSON.parse(saved); loadDataset(d.headers,d.rows,d.filename||'Previous dataset'); }
+};
+
+// ── NAVIGATION ──
+function showPanel(id, el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  const titles={dashboard:'Dashboard',upload:'Upload Data',charts:'Charts',table:'Data Table',ai:'AI Insights',reports:'Reports & Export',users:'User Management'};
+  const subs={dashboard:'Overview and KPIs of your dataset',upload:'Import CSV or Excel files',charts:'Visualize your data interactively',table:'Browse, filter, and sort your data',ai:'Ask AI questions about your data',reports:'Download and export your analysis',users:'Manage team access'};
+  document.getElementById('page-title').textContent=titles[id]||id;
+  document.getElementById('page-sub').textContent=subs[id]||'';
+  if(id==='sidebar') document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+
+// ── FILE HANDLING ──
+function handleDragOver(e){ e.preventDefault(); document.getElementById('upload-zone').classList.add('dragover'); }
+function handleDragLeave(){ document.getElementById('upload-zone').classList.remove('dragover'); }
+function handleDrop(e){ e.preventDefault(); handleDragLeave(); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); }
+function handleFileSelect(e){ if(e.target.files[0]) processFile(e.target.files[0]); }
+
+function processFile(file){
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(!['csv','xlsx','xls'].includes(ext)){ showToast('Unsupported file type. Use CSV or Excel.','error'); return; }
+  const progress = document.getElementById('upload-progress');
+  const bar = document.getElementById('progress-bar');
+  const pct = document.getElementById('upload-pct');
+  const detail = document.getElementById('upload-detail');
+  progress.style.display='block';
+  document.getElementById('upload-filename').textContent = file.name;
+  let p=0; const iv = setInterval(()=>{ p+=Math.random()*15; if(p>85){ clearInterval(iv); } bar.style.width=Math.min(p,85)+'%'; pct.textContent=Math.min(Math.round(p),85)+'%'; detail.textContent='Parsing file...'; },100);
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      let data;
+      if(ext==='csv'){ data = parseCSV(e.target.result); }
+      else { const wb=XLSX.read(e.target.result,{type:'binary'}); const ws=wb.Sheets[wb.SheetNames[0]]; data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''}); }
+      clearInterval(iv); bar.style.width='100%'; pct.textContent='100%'; detail.textContent='Done!';
+      const hdrs = data[0].map(h=>String(h||'').trim()||'Col');
+      const rows = data.slice(1).filter(r=>r.some(c=>c!==''&&c!==null&&c!==undefined));
+      setTimeout(()=>{ progress.style.display='none'; loadDataset(hdrs,rows,file.name); },400);
+    } catch(err){ clearInterval(iv); progress.style.display='none'; showToast('Error parsing file: '+err.message,'error'); }
+  };
+  if(ext==='csv') reader.readAsText(file); else reader.readAsBinaryString(file);
+}
+
+function parseCSV(text){
+  const lines=text.split(/\r?\n/); const result=[];
+  for(const line of lines){
+    if(!line.trim()) continue;
+    const row=[]; let cur='', inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){ inQ=!inQ; }
+      else if(c===','&&!inQ){ row.push(cur.trim()); cur=''; }
+      else{ cur+=c; }
+    }
+    row.push(cur.trim()); result.push(row);
+  }
+  return result;
+}
+
+function loadDataset(hdrs, rows, filename){
+  headers=hdrs; allData=rows; filteredData=[...rows];
+  localStorage.setItem('dl_data',JSON.stringify({headers:hdrs,rows:rows,filename}));
+  document.getElementById('upload-badge').style.display='flex';
+  showFileInfo(filename, rows.length, hdrs.length);
+  updateKPIs(); buildTable(); populateChartSelectors(); renderDashboardCharts();
+  document.getElementById('no-data-state').style.display='none';
+  document.getElementById('dashboard-charts').style.display='grid';
+  document.getElementById('table-empty').style.display='none';
+  document.getElementById('table-content').style.display='block';
+  document.getElementById('charts-empty').style.display='none';
+  document.getElementById('charts-content').style.display='block';
+  addAIMessage('ai',`✅ **Dataset loaded:** "${filename}" — ${rows.length.toLocaleString()} rows × ${hdrs.length} columns.\n\nI detected these columns: ${hdrs.slice(0,6).join(', ')}${hdrs.length>6?'...':''}.\n\nWhat would you like to know about this data?`);
+  showToast(`Loaded ${rows.length.toLocaleString()} rows from ${filename}`,'success');
+}
+
+function showFileInfo(name, rows, cols){
+  const el = document.getElementById('file-preview-info');
+  el.style.display='block';
+  el.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px"><div style="font-weight:700;margin-bottom:4px">📄 ${name}</div><div style="font-size:.8rem;color:var(--text-muted)">${rows.toLocaleString()} rows · ${cols} columns</div></div>
+    <div style="display:flex;gap:10px">
+      <button class="hbtn hbtn-green" onclick="showPanel('dashboard',document.querySelector('.nav-item'))">View Dashboard</button>
+      <button class="hbtn hbtn-primary" onclick="showPanel('table',null)">Browse Table</button>
+    </div>
+  </div>`;
+}
+
+// ── DEMO DATASETS ──
+function loadDemo(type){
+  const demos = {
+    sales:{
+      headers:['Product','Category','Revenue','Units','Region','Month','Status'],
+      rows:[
+        ['Laptop Pro X','Electronics',48200,214,'North','Jan','Active'],['Wireless Headset','Electronics',31400,628,'South','Jan','Active'],
+        ['Smart Watch','Electronics',22700,189,'East','Feb','Review'],['Office Chair','Furniture',18900,94,'West','Feb','Active'],
+        ['Desk Lamp','Furniture',6200,310,'North','Mar','Active'],['USB Hub','Electronics',9800,520,'South','Mar','Active'],
+        ['Notebook Set','Stationery',4500,900,'East','Apr','Active'],['Monitor 4K','Electronics',65000,130,'West','Apr','Active'],
+        ['Standing Desk','Furniture',42000,84,'North','May','Active'],['Keyboard Mech','Electronics',19200,384,'South','May','Review'],
+        ['Webcam HD','Electronics',12800,256,'East','Jun','Active'],['Mouse Ergonomic','Electronics',8700,435,'West','Jun','Active'],
+        ['Printer Laser','Electronics',35600,89,'North','Jul','Active'],['Paper A4','Stationery',2100,1050,'South','Jul','Active'],
+        ['Bookshelf','Furniture',22400,56,'East','Aug','Active'],['Pen Set','Stationery',1800,900,'West','Aug','Active'],
+        ['Tablet 10"','Electronics',54200,108,'North','Sep','Review'],['Phone Stand','Electronics',3900,780,'South','Sep','Active'],
+        ['Desk Organizer','Stationery',5600,280,'East','Oct','Active'],['Speaker BT','Electronics',28400,284,'West','Oct','Active'],
+        ['Gaming Chair','Furniture',68000,85,'North','Nov','Active'],['Headphones NC','Electronics',41200,206,'South','Nov','Active'],
+        ['SSD 1TB','Electronics',33600,168,'East','Dec','Active'],['Flash Drive','Electronics',6800,680,'West','Dec','Active'],
+      ]
+    },
+    finance:{
+      headers:['Department','Budget','Expenses','Profit','Q','Year','Variance%'],
+      rows:[
+        ['Engineering',500000,420000,80000,'Q1',2024,16],['Marketing',200000,195000,5000,'Q1',2024,2.5],
+        ['Sales',350000,280000,70000,'Q1',2024,20],['HR',100000,98000,2000,'Q1',2024,2],
+        ['Operations',450000,410000,40000,'Q2',2024,8.9],['Engineering',520000,450000,70000,'Q2',2024,13.5],
+        ['Marketing',220000,215000,5000,'Q2',2024,2.3],['Sales',380000,300000,80000,'Q2',2024,21],
+        ['HR',105000,102000,3000,'Q3',2024,2.9],['Operations',460000,425000,35000,'Q3',2024,7.6],
+        ['Engineering',540000,470000,70000,'Q3',2024,13],['Marketing',230000,228000,2000,'Q3',2024,0.9],
+        ['Sales',400000,320000,80000,'Q4',2024,20],['HR',110000,108000,2000,'Q4',2024,1.8],
+        ['Operations',480000,440000,40000,'Q4',2024,8.3],['Engineering',560000,490000,70000,'Q4',2024,12.5],
+      ]
+    },
+    academic:{
+      headers:['Student','Subject','Score','Grade','Semester','Year','Attendance%'],
+      rows:[
+        ['Alice Johnson','Math',92,'A','Fall',2024,96],['Alice Johnson','Science',88,'B+','Fall',2024,94],
+        ['Bob Smith','Math',74,'C+','Fall',2024,82],['Bob Smith','English',81,'B','Fall',2024,88],
+        ['Carol White','Science',95,'A+','Fall',2024,99],['Carol White','History',90,'A','Fall',2024,97],
+        ['David Lee','Math',68,'D+','Fall',2024,75],['David Lee','Science',72,'C+','Fall',2024,80],
+        ['Eva Brown','English',96,'A+','Fall',2024,100],['Eva Brown','Math',89,'B+','Fall',2024,95],
+        ['Frank Kim','History',78,'C+','Spring',2024,85],['Frank Kim','Science',84,'B','Spring',2024,90],
+        ['Grace Park','Math',91,'A','Spring',2024,93],['Grace Park','English',87,'B+','Spring',2024,91],
+        ['Henry Liu','Science',76,'C+','Spring',2024,83],['Henry Liu','Math',82,'B-','Spring',2024,87],
+        ['Iris Chen','History',94,'A','Spring',2024,98],['Iris Chen','English',91,'A','Spring',2024,96],
+        ['James Wilson','Math',63,'D','Spring',2024,72],['James Wilson','Science',70,'C','Spring',2024,79],
+      ]
+    }
+  };
+  const d = demos[type];
+  loadDataset(d.headers, d.rows, type.charAt(0).toUpperCase()+type.slice(1)+' Dataset');
+  showPanel('dashboard', document.querySelector('.nav-item'));
+}
+
+// ── KPIs ──
+function updateKPIs(){
+  document.getElementById('kpi-rows').textContent = allData.length.toLocaleString();
+  document.getElementById('kpi-rows-d').innerHTML = `<span class="delta-up">▲ ${headers.length} columns detected</span>`;
+  document.getElementById('kpi-cols').textContent = headers.length;
+  document.getElementById('kpi-cols-d').textContent = headers.slice(0,3).join(', ')+(headers.length>3?'...':'');
+  const numCol = getNumericColumn();
+  if(numCol !== null){
+    const vals = allData.map(r=>parseNum(r[numCol])).filter(v=>!isNaN(v));
+    const sum = vals.reduce((a,b)=>a+b,0);
+    const avg = sum/vals.length;
+    document.getElementById('kpi-sum').textContent = fmtNum(sum);
+    document.getElementById('kpi-sum-d').textContent = `Column: ${headers[numCol]}`;
+    document.getElementById('kpi-avg').textContent = fmtNum(avg);
+    document.getElementById('kpi-avg-d').textContent = `Min: ${fmtNum(Math.min(...vals))} · Max: ${fmtNum(Math.max(...vals))}`;
+  }
+}
+
+function getNumericColumn(){
+  for(let c=0;c<headers.length;c++){
+    const vals = allData.slice(0,10).map(r=>r[c]);
+    const nums = vals.filter(v=>!isNaN(parseFloat(v))&&v!=='');
+    if(nums.length>=3) return c;
+  }
+  return null;
+}
+
+function parseNum(v){ return parseFloat(String(v).replace(/[,$%]/g,'')); }
+function fmtNum(n){ if(isNaN(n)) return '—'; if(Math.abs(n)>=1e6) return (n/1e6).toFixed(1)+'M'; if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+'K'; return n%1===0?n.toLocaleString():n.toFixed(2); }
+
+// ── CHARTS ──
+const COLORS=['#2563EB','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#F97316','#EC4899','#14B8A6','#84CC16'];
+const LIGHT_COLORS=['#DBEAFE','#D1FAE5','#FEF3C7','#FEE2E2','#EDE9FE','#CFFAFE'];
+
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+function renderDashboardCharts(){
+  if(!allData.length) return;
+  const nc = getNumericColumn();
+  const catCols = headers.map((h,i)=>({i,h})).filter(({i})=>{const uq=new Set(allData.map(r=>r[i]));return uq.size<=20&&uq.size>1&&i!==nc});
+  const catCol = catCols[0];
+  const numCols = headers.map((h,i)=>({i,h})).filter(({i})=>allData.slice(0,5).filter(r=>!isNaN(parseNum(r[i]))).length>=3);
+
+  // Chart 1 — first categorical vs first numeric
+  destroyChart('chart1');
+  if(catCol && nc !== null){
+    const labels = [...new Set(allData.map(r=>String(r[catCol.i])).slice(0,12))];
+    const vals = labels.map(l=>{ const rows=allData.filter(r=>String(r[catCol.i])===l); return rows.reduce((s,r)=>s+parseNum(r[nc]),0)/rows.length; });
+    document.getElementById('chart1-title').textContent = `${headers[nc]} by ${catCol.h}`;
+    document.getElementById('chart1-sub').textContent = `Average ${headers[nc]} per ${catCol.h}`;
+    charts.chart1 = new Chart(document.getElementById('chart1').getContext('2d'), buildChartConfig('bar',labels,vals));
+  }
+
+  // Chart 2 — distribution of categories
+  destroyChart('chart2');
+  if(catCol){
+    const counts={};
+    allData.forEach(r=>{const k=String(r[catCol.i]); counts[k]=(counts[k]||0)+1;});
+    const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    document.getElementById('chart2-title').textContent = `${catCol.h} Distribution`;
+    charts.chart2 = new Chart(document.getElementById('chart2').getContext('2d'), buildChartConfig('doughnut',sorted.map(s=>s[0]),sorted.map(s=>s[1])));
+  }
+
+  // Chart 3 — trend of first numeric col
+  destroyChart('chart3');
+  if(nc !== null){
+    const maxPts = 30; const step = Math.max(1,Math.floor(allData.length/maxPts));
+    const rows = allData.filter((_,i)=>i%step===0).slice(0,maxPts);
+    const vals = rows.map(r=>parseNum(r[nc]));
+    const labels = rows.map((_,i)=>`#${i*step+1}`);
+    document.getElementById('chart3-title').textContent = `${headers[nc]} Trend`;
+    charts.chart3 = new Chart(document.getElementById('chart3').getContext('2d'), buildChartConfig('line',labels,vals,true));
+  }
+}
+
+function buildChartConfig(type, labels, data, fill=false){
+  const isCircle = ['doughnut','pie'].includes(type);
+  return {
+    type, data:{
+      labels,
+      datasets:[{
+        label:'Value', data,
+        backgroundColor: isCircle ? COLORS.slice(0,data.length) : COLORS[0]+'33',
+        borderColor: isCircle ? COLORS.slice(0,data.length).map(c=>c) : COLORS[0],
+        borderWidth: isCircle ? 2 : 2,
+        borderRadius: type==='bar' ? 4 : 0,
+        fill: fill ? {target:'origin',above:COLORS[0]+'15'} : false,
+        tension:.35, pointRadius:3, pointHoverRadius:5,
+        pointBackgroundColor:COLORS[0]
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:isCircle,position:'right',labels:{font:{family:'DM Sans',size:11},boxWidth:10,padding:8}},
+        tooltip:{callbacks:{label:(ctx)=>` ${isCircle?ctx.label+': ':''} ${typeof ctx.raw==='number'?ctx.raw.toLocaleString():ctx.raw}`}}},
+      scales: isCircle ? {} : {x:{grid:{display:false},ticks:{font:{family:'DM Mono',size:10},maxTicksLimit:8}},y:{grid:{color:'#F1F5F9'},ticks:{font:{family:'DM Mono',size:10}}}},
+      animation:{duration:600,easing:'easeInOutQuart'}
+    }
+  };
+}
+
+// FIX: Destroy old chart explicitly rather than mutating scales
+function setChartType(chartId, type, btn){
+  if(!charts[chartId]) return;
+  btn.closest('.cc-controls').querySelectorAll('.chart-type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Extract old data before destruction
+  const labels = charts[chartId].data.labels;
+  const vals = charts[chartId].data.datasets[0].data;
+  
+  // Destroy completely to avoid scale transition errors and canvas reuse issues
+  destroyChart(chartId);
+
+  // Re-instantiate with new configuration
+  const fill = type === 'line';
+  charts[chartId] = new Chart(document.getElementById(chartId).getContext('2d'), buildChartConfig(type, labels, vals, fill));
+}
+
+// ── CUSTOM CHARTS ──
+function populateChartSelectors(){
+  ['chart-x','chart-y','filter-col'].forEach(id=>{
+    const el=document.getElementById(id); el.innerHTML='<option value="">— Select —</option>';
+    headers.forEach((h,i)=>{ const o=document.createElement('option');o.value=i;o.textContent=h;el.appendChild(o); });
+  });
+}
+
+function renderCustomChart(){
+  const xi=document.getElementById('chart-x').value; const yi=document.getElementById('chart-y').value;
+  const type=document.getElementById('chart-type-sel').value;
+  if(xi===''||yi==='') return;
+  const isCircle=['doughnut','pie'].includes(type);
+  destroyChart('custom-chart');
+  let labels, vals;
+  if(isCircle){
+    const counts={};
+    allData.forEach(r=>{const k=String(r[xi]);counts[k]=(counts[k]||0)+parseNum(r[yi])||1;});
+    const sorted=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    labels=sorted.map(s=>s[0]); vals=sorted.map(s=>s[1]);
+  } else if(type==='scatter'){
+    const pts=allData.slice(0,200).map(r=>({x:parseNum(r[xi]),y:parseNum(r[yi])})).filter(p=>!isNaN(p.x)&&!isNaN(p.y));
+    labels=null; vals=pts;
+  } else {
+    const maxPts=30; const step=Math.max(1,Math.floor(allData.length/maxPts));
+    const rows=allData.filter((_,i)=>i%step===0).slice(0,maxPts);
+    labels=rows.map(r=>String(r[xi]).slice(0,15)); vals=rows.map(r=>parseNum(r[yi]));
+  }
+  document.getElementById('custom-chart-sub').textContent=`${headers[xi]} vs ${headers[yi]}`;
+  const cfg=type==='scatter'?{
+    type:'scatter',data:{datasets:[{label:'Data',data:vals,backgroundColor:COLORS[0]+'99',borderColor:COLORS[0],pointRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{family:'DM Mono',size:10}}},y:{ticks:{font:{family:'DM Mono',size:10}}}},animation:{duration:500}}
+  } : buildChartConfig(type,labels,vals);
+  charts['custom-chart']=new Chart(document.getElementById('custom-chart').getContext('2d'),cfg);
+}
+
+// ── TABLE ──
+function buildTable(){ filteredData=[...allData]; renderTable(); }
+
+function renderTable(){
+  if(!headers.length) return;
+  // Head
+  const thead=document.getElementById('table-head');
+  thead.innerHTML='<tr>'+headers.map((h,i)=>`<th onclick="sortTable(${i})" class="${sortCol===i?(sortDir===1?'sort-asc':'sort-desc'):''}">${h}</th>`).join('')+'</tr>';
+  // Body
+  const start=(currentPage-1)*rowsPerPage; const end=start+rowsPerPage;
+  const pageData=filteredData.slice(start,end);
+  const tbody=document.getElementById('table-body');
+  tbody.innerHTML=pageData.map(row=>'<tr>'+headers.map((_,i)=>{
+    const v=row[i]; const n=parseNum(v);
+    return `<td class="${!isNaN(n)&&v!==''?'num':''}">${v!==undefined&&v!==null&&v!==''?v:'<span style="color:var(--text-subtle)">—</span>'}</td>`;
+  }).join('')+'</tr>').join('');
+  // Footer
+  document.getElementById('table-info').textContent=`Showing ${Math.min(start+1,filteredData.length)}–${Math.min(end,filteredData.length)} of ${filteredData.length.toLocaleString()} rows`;
+  document.getElementById('table-count').textContent=filteredData.length!==allData.length?`${filteredData.length} of ${allData.length} rows`:allData.length.toLocaleString()+' rows';
+  renderPagination();
+}
+
+function sortTable(col){
+  if(sortCol===col) sortDir*=-1; else { sortCol=col; sortDir=1; }
+  filteredData.sort((a,b)=>{
+    const av=a[col]; const bv=b[col];
+    const an=parseNum(av); const bn=parseNum(bv);
+    if(!isNaN(an)&&!isNaN(bn)) return (an-bn)*sortDir;
+    return String(av).localeCompare(String(bv))*sortDir;
+  });
+  currentPage=1; renderTable();
+}
+
+function filterTable(){
+  const search=document.getElementById('table-search').value.toLowerCase();
+  const col=document.getElementById('filter-col').value;
+  const op=document.getElementById('filter-op').value;
+  const val=document.getElementById('filter-val').value.toLowerCase();
+  filteredData=allData.filter(row=>{
+    const matchSearch=!search||row.some(c=>String(c).toLowerCase().includes(search));
+    let matchFilter=true;
+    if(col!==''&&val){
+      const cellVal=String(row[col]).toLowerCase();
+      const cellNum=parseNum(row[col]); const filterNum=parseNum(val);
+      if(op==='contains') matchFilter=cellVal.includes(val);
+      else if(op==='equals') matchFilter=cellVal===val;
+      else if(op==='gt'&&!isNaN(cellNum)&&!isNaN(filterNum)) matchFilter=cellNum>filterNum;
+      else if(op==='lt'&&!isNaN(cellNum)&&!isNaN(filterNum)) matchFilter=cellNum<filterNum;
+    }
+    return matchSearch&&matchFilter;
+  });
+  currentPage=1; renderTable();
+}
+
+function toggleFilterRow(){
+  const fr=document.getElementById('filter-row');
+  fr.style.display=fr.style.display==='none'?'flex':'none';
+}
+
+function clearFilter(){
+  document.getElementById('filter-col').value='';
+  document.getElementById('filter-val').value='';
+  document.getElementById('table-search').value='';
+  filterTable();
+}
+
+function renderPagination(){
+  const totalPages=Math.ceil(filteredData.length/rowsPerPage);
+  const pg=document.getElementById('pagination');
+  if(totalPages<=1){ pg.innerHTML=''; return; }
+  let html='';
+  if(currentPage>1) html+=`<button class="pg-btn" onclick="goPage(${currentPage-1})">‹</button>`;
+  const start=Math.max(1,currentPage-2); const end=Math.min(totalPages,currentPage+2);
+  if(start>1) html+=`<button class="pg-btn" onclick="goPage(1)">1</button>${start>2?'<span style="padding:5px 4px;color:var(--text-subtle)">…</span>':''}`;
+  for(let i=start;i<=end;i++) html+=`<button class="pg-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  if(end<totalPages) html+=`${end<totalPages-1?'<span style="padding:5px 4px;color:var(--text-subtle)">…</span>':''}<button class="pg-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
+  if(currentPage<totalPages) html+=`<button class="pg-btn" onclick="goPage(${currentPage+1})">›</button>`;
+  pg.innerHTML=html;
+}
+
+function goPage(p){ currentPage=p; renderTable(); }
+
+// ── AI ──
+function handleAIKey(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendAIMessage(); } }
+
+function sendAISuggestion(el){ document.getElementById('ai-input').value=el.textContent; sendAIMessage(); }
+
+async function sendAIMessage(){
+  const input=document.getElementById('ai-input');
+  const msg=input.value.trim();
+  if(!msg) return;
+  input.value='';
+  addAIMessage('user',msg);
+  addAIMessage('ai','<em style="color:var(--text-muted)">Analyzing your data...</em>',true);
+  
+  try{
+    // Build context about the dataset
+    const dataContext = allData.length ? `
+Dataset: ${allData.length} rows × ${headers.length} columns
+Columns: ${headers.join(', ')}
+First 3 rows sample:
+${allData.slice(0,3).map(r=>headers.map((h,i)=>`${h}: ${r[i]}`).join(' | ')).join('\n')}
+
+Numeric summary:
+${headers.map((h,i)=>{
+  const vals=allData.map(r=>parseNum(r[i])).filter(v=>!isNaN(v));
+  if(vals.length===0) return null;
+  const sum=vals.reduce((a,b)=>a+b,0);
+  return `${h}: min=${Math.min(...vals).toFixed(1)}, max=${Math.max(...vals).toFixed(1)}, avg=${(sum/vals.length).toFixed(1)}, total=${sum.toFixed(1)}`;
+}).filter(Boolean).join('\n')}
+` : 'No dataset loaded yet.';
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:`You are DataLens AI, a helpful data analyst assistant embedded in a data dashboard. Analyze the user's dataset and answer questions concisely. Format responses clearly using bullet points or short paragraphs. Be specific with numbers from the data. If no data is loaded, encourage the user to upload a file.`,
+        messages:[{role:'user',content:`Dataset context:\n${dataContext}\n\nUser question: ${msg}`}]
+      })
+    });
+    const data=await resp.json();
+    const reply = data.content?.[0]?.text || 'I could not generate a response. Please try again.';
+    updateLastAIMessage(reply);
+  } catch(err){
+    // Fallback demo mode response
+    updateLastAIMessage(generateDemoResponse(msg));
+  }
+}
+
+function generateDemoResponse(msg){
+  if(!allData.length) return "📂 Please upload a dataset first! Drag & drop a CSV or Excel file, or load one of the demo datasets from the Upload section.";
+  const nc=getNumericColumn();
+  const m=msg.toLowerCase();
+  if(m.includes('sum')||m.includes('total')){
+    if(nc!==null){ const sum=allData.map(r=>parseNum(r[nc])).filter(v=>!isNaN(v)).reduce((a,b)=>a+b,0); return `📊 The total sum of **${headers[nc]}** is **${fmtNum(sum)}** across ${allData.length} rows.`; }
+  }
+  if(m.includes('average')||m.includes('mean')){
+    if(nc!==null){ const vals=allData.map(r=>parseNum(r[nc])).filter(v=>!isNaN(v)); const avg=vals.reduce((a,b)=>a+b,0)/vals.length; return `📊 The average of **${headers[nc]}** is **${fmtNum(avg)}** (min: ${fmtNum(Math.min(...vals))}, max: ${fmtNum(Math.max(...vals))}).`; }
+  }
+  if(m.includes('summar')||m.includes('overview')||m.includes('tell me about')){
+    return `📋 **Dataset Summary:**\n• **${allData.length.toLocaleString()} rows** × **${headers.length} columns**\n• Columns: ${headers.join(', ')}\n• ${nc!==null?`Key metric: **${headers[nc]}** (numeric)`:'Primarily categorical data'}\n\nThis looks like ${headers.join(',').toLowerCase().includes('revenue')||headers.join(',').toLowerCase().includes('sales')?'sales/financial':'structured'} data. Try filtering by categories or exporting a report!`;
+  }
+  if(m.includes('highest')||m.includes('top')||m.includes('max')){
+    if(nc!==null){ const max=allData.reduce((best,r)=>parseNum(r[nc])>parseNum(best[nc])?r:best,allData[0]); return `🔝 The highest **${headers[nc]}** is **${fmtNum(parseNum(max[nc]))}** in row: ${headers.map((h,i)=>`${h}=${max[i]}`).slice(0,4).join(', ')}.`; }
+  }
+  if(m.includes('anomal')||m.includes('outlier')){
+    if(nc!==null){ const vals=allData.map(r=>parseNum(r[nc])).filter(v=>!isNaN(v)); const avg=vals.reduce((a,b)=>a+b,0)/vals.length; const std=Math.sqrt(vals.reduce((s,v)=>s+(v-avg)**2,0)/vals.length); const outliers=vals.filter(v=>Math.abs(v-avg)>2*std); return `🔍 Found **${outliers.length} potential outlier${outliers.length!==1?'s':''}** in **${headers[nc]}** (values more than 2σ from mean ${fmtNum(avg)}).\n\nOutlier values: ${outliers.slice(0,5).map(fmtNum).join(', ')}${outliers.length>5?'...':''}`; }
+  }
+  return `🤔 I analyzed your dataset (${allData.length} rows × ${headers.length} columns).\n\nI can help you:\n• Calculate sums, averages, min/max\n• Find top values or outliers\n• Summarize columns and trends\n• Compare categories\n\nTry asking: "What is the total sum?" or "Summarize this dataset for me"`;
+}
+
+function addAIMessage(role, text, isLoading=false){
+  const chat=document.getElementById('ai-chat');
+  const div=document.createElement('div');
+  div.className=`ai-msg ${role}${isLoading?' loading-msg':''}`;
+  div.innerHTML=`${role==='ai'?'<div class="ai-msg-label">DataLens AI</div>':''}${text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}`;
+  chat.appendChild(div);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+function updateLastAIMessage(text){
+  const loading=document.querySelector('.loading-msg');
+  if(loading){ loading.classList.remove('loading-msg'); loading.innerHTML=`<div class="ai-msg-label">DataLens AI</div>${text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>')}`;
+    document.getElementById('ai-chat').scrollTop=99999; }
+}
+
+// FIX: Ensure jsPDF correctly initializes utilizing the global window mapping
+function exportCSV(){
+  if(!allData.length){ showToast('No data to export. Load a dataset first.','error'); return; }
+  const rows=[headers,...filteredData];
+  const csv=rows.map(r=>r.map(c=>typeof c==='string'&&c.includes(',')?`"${c}"`:c).join(',')).join('\n');
+  download('datalens-export.csv','text/csv',csv);
+  showToast('CSV downloaded!','success');
+}
+
+function exportExcel(){
+  if(!allData.length){ showToast('No data to export.','error'); return; }
+  const ws=XLSX.utils.aoa_to_sheet([headers,...filteredData]);
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'DataLens');
+  XLSX.writeFile(wb,'datalens-export.xlsx');
+  showToast('Excel file downloaded!','success');
+}
+
+function exportPDF(){
+  if(!allData.length){ showToast('No data to export. Load a dataset first.','error'); return; }
+  const doc = new window.jsPDF();
+  // Header
+  doc.setFillColor(37,99,235); doc.rect(0,0,210,28,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.text('DataLens Report',14,18);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(`Generated: ${new Date().toLocaleString()}`,14,25);
+  // KPI summary
+  doc.setTextColor(15,23,42); doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('Dataset Summary',14,40);
+  doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(`Total Records: ${allData.length.toLocaleString()}`,14,48);
+  doc.text(`Columns: ${headers.length} (${headers.slice(0,5).join(', ')}${headers.length>5?'...':''})`,14,55);
+  doc.text(`Filtered Rows: ${filteredData.length.toLocaleString()}`,14,62);
+  const nc=getNumericColumn();
+  if(nc!==null){
+    const vals=allData.map(r=>parseNum(r[nc])).filter(v=>!isNaN(v));
+    const sum=vals.reduce((a,b)=>a+b,0);
+    doc.text(`${headers[nc]} — Sum: ${fmtNum(sum)} | Avg: ${fmtNum(sum/vals.length)} | Min: ${fmtNum(Math.min(...vals))} | Max: ${fmtNum(Math.max(...vals))}`,14,69);
+  }
+  // Table
+  doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('Data Table (first 50 rows)',14,80);
+  const tableData = filteredData.slice(0,50).map(r=>r.map(c=>String(c).slice(0,20)));
+  
+  doc.autoTable({
+    head:[headers.map(h=>h.slice(0,14))],
+    body:tableData,
+    startY:86,
+    styles:{fontSize:7,cellPadding:2},
+    headStyles:{fillColor:[37,99,235],textColor:255,fontStyle:'bold'},
+    alternateRowStyles:{fillColor:[248,250,252]},
+    margin:{left:14,right:14}
+  });
+  doc.save('datalens-report.pdf');
+  showToast('PDF report downloaded!','success');
+}
+
+function copyJSON(){
+  if(!allData.length){ showToast('No data to copy.','error'); return; }
+  const json=JSON.stringify(filteredData.map(row=>Object.fromEntries(headers.map((h,i)=>[h,row[i]]))),null,2);
+  navigator.clipboard.writeText(json).then(()=>showToast('JSON copied to clipboard!','success')).catch(()=>showToast('Failed to copy.','error'));
+}
+
+function showSummaryStats(){
+  if(!allData.length){ showToast('No data loaded.','error'); return; }
+  const numCols=headers.map((h,i)=>({h,i})).filter(({i})=>allData.slice(0,10).filter(r=>!isNaN(parseNum(r[i]))).length>=3);
+  if(!numCols.length){ openModal('Summary Stats','<p style="color:var(--text-muted)">No numeric columns found in dataset.</p>'); return; }
+  let html='<div style="display:flex;flex-direction:column;gap:14px">';
+  numCols.forEach(({h,i})=>{
+    const vals=allData.map(r=>parseNum(r[i])).filter(v=>!isNaN(v)).sort((a,b)=>a-b);
+    const sum=vals.reduce((a,b)=>a+b,0); const avg=sum/vals.length;
+    const med=vals.length%2?vals[Math.floor(vals.length/2)]:(vals[vals.length/2-1]+vals[vals.length/2])/2;
+    const std=Math.sqrt(vals.reduce((s,v)=>s+(v-avg)**2,0)/vals.length);
+    html+=`<div style="border:1px solid var(--border);border-radius:8px;padding:14px"><div style="font-weight:700;margin-bottom:10px;font-size:.85rem">${h}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      ${[['Count',vals.length.toLocaleString()],['Sum',fmtNum(sum)],['Mean',fmtNum(avg)],['Median',fmtNum(med)],['Min',fmtNum(vals[0])],['Max',fmtNum(vals[vals.length-1])],['Std Dev',fmtNum(std)]].map(([l,v])=>`<div style="background:var(--bg);border-radius:6px;padding:8px;text-align:center"><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:3px">${l}</div><div style="font-weight:700;font-size:.85rem;font-family:'DM Mono',monospace">${v}</div></div>`).join('')}
+    </div></div>`;
+  });
+  html+='</div>';
+  openModal('Summary Statistics',html);
+}
+
+function showDataProfile(){
+  if(!allData.length){ showToast('No data loaded.','error'); return; }
+  let html='<div style="display:flex;flex-direction:column;gap:10px">';
+  headers.forEach((h,i)=>{
+    const vals=allData.map(r=>r[i]); const nonNull=vals.filter(v=>v!==''&&v!==null&&v!==undefined);
+    const unique=new Set(nonNull.map(v=>String(v))).size;
+    const nullCount=vals.length-nonNull.length;
+    const isNum=nonNull.slice(0,5).filter(v=>!isNaN(parseNum(v))).length>=3;
+    html+=`<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:8px;padding:10px;background:var(--bg);border-radius:6px;align-items:center;font-size:.78rem">
+      <div style="font-weight:600">${h}</div>
+      <div><span style="background:${isNum?'var(--blue-light)':'var(--green-light)'};color:${isNum?'var(--blue)':'#065F46'};padding:2px 6px;border-radius:4px;font-size:.65rem;font-weight:700">${isNum?'Numeric':'Text'}</span></div>
+      <div style="color:var(--text-muted)">${unique} unique</div>
+      <div style="color:${nullCount>0?'var(--red)':'var(--green)'}">${nullCount} null${nullCount!==1?'s':''}</div>
+      <div style="color:var(--text-muted)">${nonNull.length}/${vals.length}</div>
+    </div>`;
+  });
+  html+='</div>';
+  openModal('Data Profile — Column Overview','<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:8px;padding:8px 10px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);border-bottom:1px solid var(--border);margin-bottom:8px"><div>Column</div><div>Type</div><div>Unique</div><div>Nulls</div><div>Fill</div></div>'+html);
+}
+
+// ── USERS ──
+function loadUsers(){
+  const DEMO_USERS=[
+    {name:'Admin User',email:'admin@datalens.demo',role:'Admin',status:'active',color:'#2563EB'},
+    {name:'Analyst User',email:'analyst@datalens.demo',role:'Analyst',status:'active',color:'#10B981'},
+    {name:'View Only',email:'viewer@datalens.demo',role:'Viewer',status:'inactive',color:'#F59E0B'},
+  ];
+  const stored=JSON.parse(localStorage.getItem('dl_users')||'[]').map(u=>({...u,status:'active',color:'#8B5CF6'}));
+  const users=[...DEMO_USERS,...stored];
+  const list=document.getElementById('users-list');
+  list.innerHTML=users.map(u=>`
+    <div class="user-row">
+      <div class="ur-user"><div class="ur-ava" style="background:${u.color||'#64748B'}">${u.name.charAt(0)}</div><div><div class="ur-name">${u.name}</div><div class="ur-email">${u.email}</div></div></div>
+      <div style="font-size:.78rem;color:var(--text-muted)">${u.email}</div>
+      <div><span class="role-badge ${u.role==='Admin'?'rb-admin':u.role==='Analyst'?'rb-analyst':'rb-viewer'}">${u.role}</span></div>
+      <div style="text-align:center"><div class="status-dot ${u.status==='active'?'sd-on':'sd-off'}" title="${u.status}"></div></div>
+      <div style="text-align:center"><button class="hbtn" style="padding:4px 10px;font-size:.72rem" onclick="showToast('User management is demo-only','info')">Edit</button></div>
+    </div>`).join('');
+}
+
+function openAddUserModal(){
+  openModal('Add User',`<div style="display:flex;flex-direction:column;gap:14px">
+    <div><label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:5px">Name</label><input type="text" id="mu-name" placeholder="Full name" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.875rem;outline:none;font-family:'DM Sans',sans-serif"></div>
+    <div><label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:5px">Email</label><input type="email" id="mu-email" placeholder="email@example.com" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.875rem;outline:none;font-family:'DM Sans',sans-serif"></div>
+    <div><label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:5px">Role</label><select id="mu-role" class="filter-sel" style="width:100%"><option>Admin</option><option>Analyst</option><option>Viewer</option></select></div>
+    <button class="hbtn hbtn-primary" style="margin-top:4px" onclick="addUserFromModal()">Add User</button>
+  </div>`);
+}
+
+function addUserFromModal(){
+  const name=document.getElementById('mu-name').value.trim();
+  const email=document.getElementById('mu-email').value.trim();
+  const role=document.getElementById('mu-role').value;
+  if(!name||!email){ showToast('Please fill in all fields.','error'); return; }
+  const users=JSON.parse(localStorage.getItem('dl_users')||'[]');
+  users.push({name,email,role,password:'demo123'});
+  localStorage.setItem('dl_users',JSON.stringify(users));
+  loadUsers(); closeModalDirect();
+  showToast(`User "${name}" added!`,'success');
+}
+
+// ── MODAL ──
+function openModal(title,html){ document.getElementById('modal-title').textContent=title; document.getElementById('modal-body').innerHTML=html; document.getElementById('modal-overlay').classList.add('open'); }
+function closeModal(e){ if(e.target===document.getElementById('modal-overlay')) closeModalDirect(); }
+function closeModalDirect(){ document.getElementById('modal-overlay').classList.remove('open'); }
+
+// ── TOAST ──
+function showToast(msg,type='info'){
+  const c=document.getElementById('toasts');
+  const t=document.createElement('div');
+  const icons={success:'<polyline points="20 6 9 17 4 12"/>',error:'<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',info:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'};
+  t.className=`toast toast-${type}`;
+  t.innerHTML=`<svg viewBox="0 0 24 24">${icons[type]||icons.info}</svg>${msg}`;
+  c.appendChild(t);
+  setTimeout(()=>{ t.style.transition='all .3s'; t.style.opacity='0'; t.style.transform='translateX(120%)'; setTimeout(()=>t.remove(),300); },3500);
+}
+
+// ── UTILS ──
+function download(filename,mime,content){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type:mime})); a.download=filename; a.click();
+}
+
+function logout(){
+  if(confirm('Sign out of DataLens?')){ localStorage.removeItem('dl_session'); location.href='login.html'; }
+}
+
+// Close sidebar on outside click (mobile)
+document.addEventListener('click',e=>{
+  const sb=document.getElementById('sidebar');
+  if(sb.classList.contains('open')&&!sb.contains(e.target)&&!e.target.closest('.mobile-menu-btn')) sb.classList.remove('open');
+});
+</script>
+</body>
+</html>

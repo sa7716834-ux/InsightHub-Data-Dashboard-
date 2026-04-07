@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DataLens — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F8FAFC;--surface:#FFFFFF;--border:#E2E8F0;
+  --text:#0F172A;--text-muted:#64748B;--text-subtle:#94A3B8;
+  --blue:#2563EB;--blue-light:#DBEAFE;--blue-dark:#1D4ED8;
+  --green:#10B981;--red:#EF4444;--red-light:#FEE2E2;
+  --radius:12px;--radius-sm:8px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+a{text-decoration:none}
+
+/* LAYOUT */
+.auth-wrap{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
+
+/* LEFT PANEL */
+.auth-left{background:var(--blue);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:48px}
+.auth-left::before{content:'';position:absolute;top:-30%;right:-20%;width:60%;height:80%;border-radius:50%;background:rgba(255,255,255,.06)}
+.auth-left::after{content:'';position:absolute;bottom:-20%;left:-10%;width:50%;height:60%;border-radius:50%;background:rgba(255,255,255,.04)}
+.al-top{position:relative;z-index:1}
+.al-logo{display:flex;align-items:center;gap:10px;color:white;font-weight:700;font-size:1.2rem;margin-bottom:56px}
+.al-logobox{width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.al-logobox svg{width:18px;height:18px;fill:white}
+.al-tagline{color:white}
+.al-tagline h2{font-size:2rem;font-weight:700;line-height:1.2;letter-spacing:-.02em;margin-bottom:16px}
+.al-tagline p{color:rgba(255,255,255,.7);line-height:1.7;font-size:.95rem;max-width:340px}
+.al-features{position:relative;z-index:1;display:flex;flex-direction:column;gap:14px}
+.alf{display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.85);font-size:.875rem}
+.alf-check{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.alf-check svg{width:12px;height:12px;stroke:white;stroke-width:2.5;fill:none}
+
+/* RIGHT PANEL */
+.auth-right{display:flex;align-items:center;justify-content:center;padding:48px;background:var(--surface)}
+.auth-card{width:100%;max-width:420px}
+.auth-header{margin-bottom:36px}
+.auth-header h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+.auth-header p{color:var(--text-muted);font-size:.9rem;line-height:1.6}
+
+/* TABS */
+.auth-tabs{display:flex;background:var(--bg);border-radius:var(--radius-sm);padding:4px;margin-bottom:28px;border:1px solid var(--border)}
+.tab{flex:1;text-align:center;padding:9px;border-radius:7px;font-weight:600;font-size:.875rem;cursor:pointer;transition:all .2s;color:var(--text-muted)}
+.tab.active{background:white;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+/* FORM */
+.form-group{margin-bottom:18px}
+label{display:block;font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:6px}
+.input-wrap{position:relative}
+input[type=text],input[type=email],input[type=password]{
+  width:100%;padding:11px 14px;padding-left:40px;
+  border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--text);
+  background:var(--surface);transition:all .2s;outline:none
+}
+input[type=text]:focus,input[type=email]:focus,input[type=password]:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.input-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-subtle)}
+.input-icon svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.input-wrap.error input{border-color:var(--red);background:var(--red-light)}
+.form-error{font-size:.78rem;color:var(--red);margin-top:5px;display:none}
+.form-error.show{display:block}
+
+/* ROLE SELECT */
+.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.role-opt{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 8px;text-align:center;cursor:pointer;transition:all .2s}
+.role-opt:hover{border-color:var(--blue)}
+.role-opt.selected{border-color:var(--blue);background:var(--blue-light)}
+.role-opt input{display:none}
+.role-name{font-size:.78rem;font-weight:600;margin-top:4px;display:block}
+.role-desc{font-size:.66rem;color:var(--text-muted);display:block;margin-top:1px}
+
+/* SUBMIT */
+.btn-submit{width:100%;padding:13px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
+.btn-submit:hover{background:var(--blue-dark);transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,99,235,.35)}
+.btn-submit:active{transform:none}
+.btn-submit.loading{opacity:.7;cursor:not-allowed}
+
+/* DIVIDER */
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+.divider-line{flex:1;height:1px;background:var(--border)}
+.divider span{font-size:.78rem;color:var(--text-subtle)}
+
+/* DEMO BOX */
+.demo-box{background:var(--blue-light);border:1px solid rgba(37,99,235,.2);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:22px}
+.demo-box-t{font-size:.78rem;font-weight:700;color:var(--blue);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.demo-creds{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.demo-cred{background:white;border-radius:6px;padding:8px 10px;cursor:pointer;transition:all .2s;border:1px solid rgba(37,99,235,.15)}
+.demo-cred:hover{border-color:var(--blue);transform:translateY(-1px)}
+.dc-role{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin-bottom:2px}
+.dc-email{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--text-muted)}
+
+/* TERMS */
+.terms{font-size:.76rem;color:var(--text-subtle);text-align:center;margin-top:16px;line-height:1.6}
+.terms a{color:var(--blue)}
+
+/* ALERT */
+.alert{padding:12px 16px;border-radius:var(--radius-sm);font-size:.85rem;margin-bottom:18px;display:none;align-items:center;gap:10px}
+.alert.show{display:flex}
+.alert-success{background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0}
+.alert-error{background:var(--red-light);color:#991B1B;border:1px solid #FCA5A5}
+
+@media(max-width:768px){
+  .auth-wrap{grid-template-columns:1fr}
+  .auth-left{display:none}
+  .auth-right{padding:32px 24px}
+}
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <!-- LEFT BRAND PANEL -->
+  <div class="auth-left">
+    <div class="al-top">
+      <div class="al-logo">
+        <div class="al-logobox"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"/></svg></div>
+        DataLens
+      </div>
+      <div class="al-tagline">
+        <h2>Your data.<br>Crystal clear.</h2>
+        <p>Upload, explore, and share insights from your Excel and CSV files — powered by AI, built for everyone.</p>
+      </div>
+    </div>
+    <div class="al-features">
+      <div class="alf"><div class="alf-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Parse any CSV or Excel file in seconds</div>
+      <div class="alf"><div class="alf-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Interactive charts that update live</div>
+      <div class="alf"><div class="alf-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>AI-powered summaries & trend detection</div>
+      <div class="alf"><div class="alf-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Export to PDF or CSV with one click</div>
+      <div class="alf"><div class="alf-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Role-based team access control</div>
+    </div>
+  </div>
+
+  <!-- RIGHT FORM PANEL -->
+  <div class="auth-right">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1 id="auth-title">Welcome back</h1>
+        <p id="auth-sub">Sign in to your DataLens account to continue.</p>
+      </div>
+
+      <div class="auth-tabs">
+        <div class="tab active" id="tab-login" onclick="switchTab('login')">Sign in</div>
+        <div class="tab" id="tab-register" onclick="switchTab('register')">Create account</div>
+      </div>
+
+      <!-- DEMO CREDENTIALS BOX -->
+      <div class="demo-box">
+        <div class="demo-box-t">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          Demo Mode — click to auto-fill
+        </div>
+        <div class="demo-creds">
+          <div class="demo-cred" onclick="fillDemo('admin@datalens.demo','admin123','Admin')">
+            <div class="dc-role">Admin</div>
+            <div class="dc-email">admin@datalens.demo</div>
+          </div>
+          <div class="demo-cred" onclick="fillDemo('analyst@datalens.demo','analyst123','Analyst')">
+            <div class="dc-role">Analyst</div>
+            <div class="dc-email">analyst@datalens.demo</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-success" id="alert-success">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="alert-success-text">Account created! Signing you in...</span>
+      </div>
+      <div class="alert alert-error" id="alert-error">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <span id="alert-error-text">Invalid credentials. Try demo credentials above.</span>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="login-email">Email address</label>
+          <div class="input-wrap" id="wrap-login-email">
+            <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+            <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"/>
+          </div>
+          <div class="form-error" id="err-login-email">Please enter a valid email address.</div>
+        </div>
+        <div class="form-group">
+          <label for="login-pass">Password</label>
+          <div class="input-wrap" id="wrap-login-pass">
+            <div class="input-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+            <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+          </div>
+          <div class="form-error" id="err-login-pass">Please enter your password.</div>
+        </div>
+        <button type="submit" class="btn-submit" id="login-btn">
+          <span id="login-btn-text">Sign in</span>
+        </button>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="register-form" style="display:none" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label for="reg-name">Full name</label>
+          <div class="input-wrap" id="wrap-reg-name">
+            <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+            <input type="text" id="reg-name" placeholder="Jane Smith" autocomplete="name"/>
+          </div>
+          <div class="form-error" id="err-reg-name">Please enter your name.</div>
+        </div>
+        <div class="form-group">
+          <label for="reg-email">Email address</label>
+          <div class="input-wrap" id="wrap-reg-email">
+            <div class="input-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+            <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email"/>
+          </div>
+          <div class="form-error" id="err-reg-email">Please enter a valid email.</div>
+        </div>
+        <div class="form-group">
+          <label for="reg-pass">Password</label>
+          <div class="input-wrap" id="wrap-reg-pass">
+            <div class="input-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+            <input type="password" id="reg-pass" placeholder="Min. 8 characters" autocomplete="new-password"/>
+          </div>
+          <div class="form-error" id="err-reg-pass">Password must be at least 8 characters.</div>
+        </div>
+        <div class="form-group">
+          <label>Your role</label>
+          <div class="role-grid">
+            <div class="role-opt selected" onclick="selectRole('Admin',this)">
+              <span style="font-size:1.2rem">👑</span>
+              <span class="role-name">Admin</span>
+              <span class="role-desc">Full control</span>
+            </div>
+            <div class="role-opt" onclick="selectRole('Analyst',this)">
+              <span style="font-size:1.2rem">📊</span>
+              <span class="role-name">Analyst</span>
+              <span class="role-desc">View & export</span>
+            </div>
+            <div class="role-opt" onclick="selectRole('Viewer',this)">
+              <span style="font-size:1.2rem">👁️</span>
+              <span class="role-name">Viewer</span>
+              <span class="role-desc">Read-only</span>
+            </div>
+          </div>
+          <input type="hidden" id="reg-role" value="Admin"/>
+        </div>
+        <button type="submit" class="btn-submit" id="reg-btn">
+          <span id="reg-btn-text">Create account</span>
+        </button>
+        <p class="terms">By signing up you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Demo accounts
+const DEMO_ACCOUNTS = [
+  {email:'admin@datalens.demo',password:'admin123',name:'Admin User',role:'Admin'},
+  {email:'analyst@datalens.demo',password:'analyst123',name:'Analyst User',role:'Analyst'},
+];
+
+// Parse URL params
+const params = new URLSearchParams(location.search);
+if(params.get('mode')==='register') switchTab('register');
+
+function switchTab(mode){
+  const isLogin = mode==='login';
+  document.getElementById('tab-login').classList.toggle('active',isLogin);
+  document.getElementById('tab-register').classList.toggle('active',!isLogin);
+  document.getElementById('login-form').style.display = isLogin?'block':'none';
+  document.getElementById('register-form').style.display = isLogin?'none':'block';
+  document.getElementById('auth-title').textContent = isLogin?'Welcome back':'Create account';
+  document.getElementById('auth-sub').textContent = isLogin?'Sign in to your DataLens account.':'Get started with DataLens for free.';
+  hideAlerts();
+}
+
+function fillDemo(email,pass,role){
+  if(document.getElementById('login-form').style.display!=='none'){
+    document.getElementById('login-email').value=email;
+    document.getElementById('login-pass').value=pass;
+  } else {
+    switchTab('login');
+    setTimeout(()=>{
+      document.getElementById('login-email').value=email;
+      document.getElementById('login-pass').value=pass;
+    },50);
+  }
+}
+
+function selectRole(role,el){
+  document.querySelectorAll('.role-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('reg-role').value=role;
+}
+
+function hideAlerts(){
+  document.getElementById('alert-success').classList.remove('show');
+  document.getElementById('alert-error').classList.remove('show');
+}
+
+function showError(msg){
+  const el = document.getElementById('alert-error');
+  document.getElementById('alert-error-text').textContent=msg;
+  el.classList.add('show');
+}
+
+function showSuccess(msg){
+  const el = document.getElementById('alert-success');
+  document.getElementById('alert-success-text').textContent=msg;
+  el.classList.add('show');
+}
+
+function setLoading(btnId, textId, loading, defaultText){
+  const btn = document.getElementById(btnId);
+  const txt = document.getElementById(textId);
+  btn.classList.toggle('loading',loading);
+  btn.disabled=loading;
+  txt.innerHTML = loading ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Loading...' : defaultText;
+}
+
+function handleLogin(e){
+  e.preventDefault();
+  hideAlerts();
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  let valid = true;
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    document.getElementById('wrap-login-email').classList.add('error');
+    document.getElementById('err-login-email').classList.add('show');
+    valid=false;
+  } else {
+    document.getElementById('wrap-login-email').classList.remove('error');
+    document.getElementById('err-login-email').classList.remove('show');
+  }
+  if(!pass){
+    document.getElementById('wrap-login-pass').classList.add('error');
+    document.getElementById('err-login-pass').classList.add('show');
+    valid=false;
+  } else {
+    document.getElementById('wrap-login-pass').classList.remove('error');
+    document.getElementById('err-login-pass').classList.remove('show');
+  }
+  if(!valid) return;
+
+  setLoading('login-btn','login-btn-text',true,'Sign in');
+
+  setTimeout(()=>{
+    // Check demo accounts + any registered accounts
+    const users = JSON.parse(localStorage.getItem('dl_users')||'[]');
+    const allUsers = [...DEMO_ACCOUNTS, ...users];
+    const user = allUsers.find(u=>u.email===email && u.password===pass);
+    if(user){
+      localStorage.setItem('dl_session', JSON.stringify({name:user.name,email:user.email,role:user.role,loginAt:Date.now()}));
+      showSuccess(`Welcome back, ${user.name.split(' ')[0]}! Redirecting...`);
+      setTimeout(()=>{ location.href='dashboard.html'; }, 1000);
+    } else {
+      setLoading('login-btn','login-btn-text',false,'Sign in');
+      showError('Invalid email or password. Try the demo credentials above.');
+    }
+  }, 900);
+}
+
+function handleRegister(e){
+  e.preventDefault();
+  hideAlerts();
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass = document.getElementById('reg-pass').value;
+  const role = document.getElementById('reg-role').value;
+  let valid = true;
+  if(!name){document.getElementById('wrap-reg-name').classList.add('error');document.getElementById('err-reg-name').classList.add('show');valid=false;}
+  else{document.getElementById('wrap-reg-name').classList.remove('error');document.getElementById('err-reg-name').classList.remove('show');}
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){document.getElementById('wrap-reg-email').classList.add('error');document.getElementById('err-reg-email').classList.add('show');valid=false;}
+  else{document.getElementById('wrap-reg-email').classList.remove('error');document.getElementById('err-reg-email').classList.remove('show');}
+  if(!pass||pass.length<8){document.getElementById('wrap-reg-pass').classList.add('error');document.getElementById('err-reg-pass').classList.add('show');valid=false;}
+  else{document.getElementById('wrap-reg-pass').classList.remove('error');document.getElementById('err-reg-pass').classList.remove('show');}
+  if(!valid) return;
+
+  setLoading('reg-btn','reg-btn-text',true,'Create account');
+  setTimeout(()=>{
+    const users = JSON.parse(localStorage.getItem('dl_users')||'[]');
+    if([...DEMO_ACCOUNTS,...users].find(u=>u.email===email)){
+      setLoading('reg-btn','reg-btn-text',false,'Create account');
+      showError('An account with this email already exists. Try signing in.');
+      return;
+    }
+    users.push({name,email,password:pass,role});
+    localStorage.setItem('dl_users',JSON.stringify(users));
+    localStorage.setItem('dl_session',JSON.stringify({name,email,role,loginAt:Date.now()}));
+    showSuccess(`Account created! Welcome, ${name.split(' ')[0]}!`);
+    setTimeout(()=>{ location.href='dashboard.html'; }, 1000);
+  }, 900);
+}
+
+// Spin animation
+const style=document.createElement('style');
+style.textContent='@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
